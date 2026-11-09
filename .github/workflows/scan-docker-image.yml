@@ -24,6 +24,7 @@ jobs:
     steps:
       - name: Install JFrog CLI with OIDC authentication
         uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
         with:
           oidc-provider-name: davidro-github-integration
           oidc-audience: davidro-github
