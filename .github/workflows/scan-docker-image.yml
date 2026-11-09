@@ -62,9 +62,17 @@ jobs:
           echo "OCI_IMAGE=${oci_image}" >> "$GITHUB_ENV"
       - name: tag, publish and attach vetted attestation
         run: |
+          set -euo pipefail
           docker tag "$IMAGE_NAME" "$OCI_IMAGE"
-          # Attach the VSA to the image pushed to the OCI repo
+          digest="$(docker push "$OCI_IMAGE" | awk '/digest: sha256:/ { print $3; exit }')"
+          if [ -z "$digest" ]; then
+            echo "docker push did not report a digest" >&2
+            exit 1
+          fi
+          image_ref="${OCI_IMAGE%:*}@${digest}"
+          jq --arg resource "$image_ref" '.resourceUri = $resource' vsa.json > vsa.json.tmp
+          mv vsa.json.tmp vsa.json
           cosign attest --yes \
             --predicate ./vsa.json \
             --type https://slsa.dev/verification_summary/v1 \
-            "$OCI_IMAGE"
+            "$image_ref"
